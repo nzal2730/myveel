@@ -24,6 +24,7 @@ import notificationsRoutes from './modules/notifications/notifications.routes';
 import reportsRoutes from './modules/reports/reports.routes';
 import settingsRoutes from './modules/settings/settings.routes';
 import seedRoutes from './modules/seed/seed.routes';
+import adminRoutes from './modules/admin/admin.routes';
 
 const app = express();
 
@@ -78,6 +79,7 @@ app.use('/api/notifications', notificationsRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/seed', seedRoutes);
+app.use('/api/admin', adminRoutes);
 
 // Client SPA routing fallback
 app.get('*', (req: Request, res: Response, next: NextFunction) => {

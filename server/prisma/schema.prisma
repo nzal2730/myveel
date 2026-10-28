@@ -15,6 +15,7 @@ model User {
   passwordHash     String
   isEmailVerified  Boolean  @default(false)
   isMobileVerified Boolean  @default(false)
+  role             String   @default("USER") // "USER" | "ADMIN"
   avatar           String?
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

@@ -10,6 +10,7 @@ const ROOT = path.resolve(__dirname, '../..');
 const SERVER_DIR = path.join(ROOT, 'server');
 const DIST_ENTRY = path.join(SERVER_DIR, 'dist', 'index.js');
 const SOURCE_DB = path.join(SERVER_DIR, 'prisma', 'dev.db');
+const { PrismaClient } = require(path.join(ROOT, 'node_modules', '@prisma', 'client'));
 
 let passed = 0;
 const failures = [];
@@ -71,6 +72,8 @@ async function main() {
   const baseUrl = `http://127.0.0.1:${port}`;
   const testDb = path.join(os.tmpdir(), `myveel-test-${process.pid}-${Date.now()}.db`);
   fs.copyFileSync(SOURCE_DB, testDb);
+  process.env.DATABASE_URL = `file:${testDb.replace(/\\/g, '/')}`;
+  const testPrisma = new PrismaClient();
 
   const logs = [];
   const child = spawn(process.execPath, [DIST_ENTRY], {
@@ -94,6 +97,7 @@ async function main() {
   const password = 'SystemTest123!';
 
   let token = '';
+  let userId = '';
 
   async function request(pathname, options = {}) {
     const headers = { Accept: 'application/json', ...(options.headers || {}) };
@@ -137,6 +141,7 @@ async function main() {
         body: { name: 'System Test', email, mobile, password },
       });
       assert.equal(result.user.email, email);
+      userId = result.user.id;
       assert.ok(result.devOtps && result.devOtps.emailOtp && result.devOtps.smsOtp);
       global.__otps = result.devOtps;
     });
@@ -179,6 +184,54 @@ async function main() {
       }
     });
 
+    await record('admin endpoints reject regular users', async () => {
+      await assert.rejects(() => request('/api/admin/overview'), /403|Admin access required/i);
+    });
+
+    await record('admin overview is available to admins', async () => {
+      await testPrisma.user.updateMany({
+        where: { email },
+        data: { role: 'ADMIN' },
+      });
+      const result = await request('/api/admin/overview');
+      assert.ok(result.stats.totalUsers >= 1);
+      assert.ok(Array.isArray(result.recentUsers));
+      assert.ok(Array.isArray(result.recentVehicles));
+    });
+
+    await record('admin user and vehicle directories load', async () => {
+      const users = await request('/api/admin/users');
+      expectArray(users, 'admin users');
+      assert.ok(users.some((user) => user.email === email));
+      assert.ok(!('passwordHash' in users[0]), 'password hashes must never be returned');
+      const vehicles = await request('/api/admin/vehicles');
+      expectArray(vehicles, 'admin vehicles');
+    });
+
+    await record('admins cannot remove their own access', async () => {
+      await assert.rejects(
+        () =>
+          request(`/api/admin/users/${userId}/role`, {
+            method: 'PATCH',
+            body: { role: 'USER' },
+          }),
+        /cannot remove your own admin access/i
+      );
+      await assert.rejects(
+        () => request(`/api/admin/users/${userId}`, { method: 'DELETE' }),
+        /cannot delete your own admin account/i
+      );
+    });
+
+    await record('admins can verify user accounts', async () => {
+      const verified = await request(`/api/admin/users/${userId}/verification`, {
+        method: 'PATCH',
+        body: { isEmailVerified: true, isMobileVerified: true },
+      });
+      assert.equal(verified.isEmailVerified, true);
+      assert.equal(verified.isMobileVerified, true);
+    });
+
     await record('settings include profile and preferences', async () => {
       const settings = await request('/api/settings');
       assert.equal(settings.profile.email, email);
@@ -211,7 +264,7 @@ async function main() {
       assert.ok(Array.isArray(detail.documents));
     });
 
-    await record('vehicle create, update and delete round-trips', async () => {
+    await record('vehicle create, update and admin delete round-trips', async () => {
       const created = await request('/api/vehicles', {
         method: 'POST',
         body: {
@@ -233,7 +286,7 @@ async function main() {
       });
       assert.equal(updated.nickname, 'Test Scooter Updated');
 
-      await request(`/api/vehicles/${created.id}`, { method: 'DELETE' });
+      await request(`/api/admin/vehicles/${created.id}`, { method: 'DELETE' });
       const after = await request('/api/vehicles');
       assert.ok(!after.some((vehicle) => vehicle.id === created.id));
     });
@@ -340,6 +393,7 @@ async function main() {
   } finally {
     child.kill();
     await new Promise((resolve) => setTimeout(resolve, 300));
+    await testPrisma.$disconnect().catch(() => undefined);
     try {
       fs.rmSync(testDb, { force: true });
     } catch {

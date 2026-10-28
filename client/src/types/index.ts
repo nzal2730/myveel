@@ -17,6 +17,7 @@ export interface User {
   avatar?: string | null;
   isEmailVerified: boolean;
   isMobileVerified: boolean;
+  role?: 'USER' | 'ADMIN' | string;
   settings?: UserSettings | null;
   unreadNotificationsCount?: number;
   vehicleCount?: number;
@@ -309,4 +310,61 @@ export interface NotificationsResponse {
 export interface SettingsResponse {
   profile: Pick<User, 'name' | 'email' | 'mobile' | 'avatar' | 'isEmailVerified' | 'isMobileVerified'>;
   preferences: UserSettings;
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  mobile: string;
+  role: 'USER' | 'ADMIN' | string;
+  avatar?: string | null;
+  isEmailVerified: boolean;
+  isMobileVerified: boolean;
+  createdAt: string;
+  _count: {
+    vehicles: number;
+    notifications?: number;
+    careSchedules?: number;
+  };
+}
+
+export interface AdminVehicle {
+  id: string;
+  nickname: string;
+  make: string;
+  model: string;
+  year: number;
+  registrationNumber: string;
+  vehicleType: string;
+  fuelType: string;
+  currentOdometer: number;
+  photo?: string | null;
+  notes?: string | null;
+  createdAt: string;
+  user: { id: string; name: string; email: string };
+  _count?: {
+    serviceRecords: number;
+    documents: number;
+    fuelLogs: number;
+    expenses: number;
+  };
+}
+
+export interface AdminOverview {
+  stats: {
+    totalUsers: number;
+    verifiedUsers: number;
+    totalAdmins: number;
+    totalVehicles: number;
+    totalRecords: number;
+    totalServices: number;
+    totalDocuments: number;
+    totalInsurancePolicies: number;
+    totalFuelLogs: number;
+    totalExpenses: number;
+    totalCareTasks: number;
+  };
+  recentUsers: AdminUser[];
+  recentVehicles: AdminVehicle[];
 }

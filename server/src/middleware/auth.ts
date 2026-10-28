@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
+import prisma from '../config/db';
 
 export interface AuthRequest extends Request {
   user?: {
@@ -29,6 +30,30 @@ export function authenticate(req: AuthRequest, res: Response, next: NextFunction
       success: false,
       message: 'Invalid or expired session. Please log in again.',
     });
+  }
+}
+
+export async function requireAdmin(req: AuthRequest, res: Response, next: NextFunction) {
+  if (!req.user?.id) {
+    return res.status(401).json({ success: false, message: 'Authentication required.' });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { role: true },
+    });
+
+    if (!user || user.role !== 'ADMIN') {
+      return res.status(403).json({
+        success: false,
+        message: 'Admin access required.',
+      });
+    }
+
+    return next();
+  } catch (err: any) {
+    return res.status(500).json({ success: false, message: err.message });
   }
 }
 

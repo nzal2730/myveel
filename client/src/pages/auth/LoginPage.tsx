@@ -30,7 +30,7 @@ export default function LoginPage() {
     try {
       const result = await login(identifier.trim(), password);
       toast.success(`Welcome back, ${result.user.name.split(' ')[0]}!`);
-      navigate(from, { replace: true });
+      navigate(result.user.role === 'ADMIN' ? '/admin' : from, { replace: true });
     } catch (err: any) {
       setError(err.message || 'Login failed. Please try again.');
     } finally {

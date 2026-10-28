@@ -20,6 +20,7 @@ import {
   Menu,
   Search,
   Settings,
+  Shield,
   ShieldCheck,
   Siren,
   UserRound,
@@ -52,6 +53,14 @@ const navItems = [
   { label: 'Settings', path: '/settings', icon: Settings },
 ];
 
+type NavItem = (typeof navItems)[number];
+
+const adminNavItems: NavItem[] = [
+  { label: 'Admin Console', path: '/admin', icon: Shield },
+  { label: 'Notifications', path: '/notifications', icon: Bell },
+  { label: 'Settings', path: '/settings', icon: Settings },
+];
+
 function Logo({ compact = false }: { compact?: boolean }) {
   return (
     <Link to="/" className="flex items-center gap-3">
@@ -73,17 +82,19 @@ function Logo({ compact = false }: { compact?: boolean }) {
 }
 
 function NavList({
+  items,
   collapsed,
   unread,
   onNavigate,
 }: {
+  items: NavItem[];
   collapsed: boolean;
   unread: number;
   onNavigate?: () => void;
 }) {
   return (
     <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-2 py-3">
-      {navItems.map((item) => {
+      {items.map((item) => {
         const Icon = item.icon;
         return (
           <NavLink
@@ -139,12 +150,20 @@ export default function Layout() {
   const [unread, setUnread] = useState(user?.unreadNotificationsCount || 0);
   const searchRef = useRef<HTMLDivElement>(null);
 
+  const visibleNavItems = useMemo<NavItem[]>(() => {
+    if (user?.role !== 'ADMIN') return navItems;
+    return adminNavItems;
+  }, [user?.role]);
+
   const currentNav = useMemo(() => {
     const path = location.pathname;
-    const exact = navItems.find((item) => item.path === path);
+    const exact = visibleNavItems.find((item) => item.path === path);
     if (exact) return exact;
-    return navItems.find((item) => item.path !== '/' && path.startsWith(item.path)) || navItems[0];
-  }, [location.pathname]);
+    return (
+      visibleNavItems.find((item) => item.path !== '/' && path.startsWith(item.path)) ||
+      visibleNavItems[0]
+    );
+  }, [location.pathname, visibleNavItems]);
 
   useEffect(() => {
     setMobileOpen(false);
@@ -182,8 +201,10 @@ export default function Layout() {
   }, []);
 
   const matches = search.trim()
-    ? navItems.filter((item) => item.label.toLowerCase().includes(search.trim().toLowerCase()))
-    : navItems.slice(0, 6);
+    ? visibleNavItems.filter((item) =>
+        item.label.toLowerCase().includes(search.trim().toLowerCase())
+      )
+    : visibleNavItems.slice(0, 6);
 
   const handleLogout = () => {
     logout();
@@ -201,7 +222,7 @@ export default function Layout() {
         <div className={cx('flex h-16 items-center border-b border-border-subtle px-4', collapsed && 'justify-center px-0')}>
           <Logo compact={collapsed} />
         </div>
-        <NavList collapsed={collapsed} unread={unread} />
+        <NavList items={visibleNavItems} collapsed={collapsed} unread={unread} />
         <div className="border-t border-border-subtle p-3">
           {!collapsed && (
             <div className="mb-3 rounded-xl border border-border-subtle bg-bg-card p-3">
@@ -236,7 +257,12 @@ export default function Layout() {
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <NavList collapsed={false} unread={unread} onNavigate={() => setMobileOpen(false)} />
+            <NavList
+              items={visibleNavItems}
+              collapsed={false}
+              unread={unread}
+              onNavigate={() => setMobileOpen(false)}
+            />
             <div className="border-t border-border-subtle p-4">
               <button
                 type="button"
