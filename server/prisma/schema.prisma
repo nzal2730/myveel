@@ -1,0 +1,339 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id               String   @id @default(uuid())
+  name             String
+  email            String   @unique
+  mobile           String   @unique
+  passwordHash     String
+  isEmailVerified  Boolean  @default(false)
+  isMobileVerified Boolean  @default(false)
+  avatar           String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  vehicles          Vehicle[]
+  drivingLicence    DrivingLicence?
+  careSchedules     CareSchedule[]
+  emergencyContacts EmergencyContact[]
+  favouritePlaces   FavouritePlace[]
+  notifications     Notification[]
+  settings          UserSettings?
+}
+
+model OtpCode {
+  id        String   @id @default(uuid())
+  target    String // email or phone
+  type      String // 'REGISTER_EMAIL', 'REGISTER_SMS', 'PASSWORD_RESET'
+  codeHash  String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([target, type])
+}
+
+model DrivingLicence {
+  id                     String   @id @default(uuid())
+  userId                 String   @unique
+  user                   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  licenceNumberEncrypted String
+  vehicleClasses         String // e.g. "LMV, MCWG"
+  issueDate              DateTime
+  expiryDate             DateTime
+  issuingAuthority       String?
+  bloodGroup             String?
+  documentUrl            String?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model Vehicle {
+  id                 String   @id @default(uuid())
+  userId             String
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nickname           String
+  make               String
+  model              String
+  year               Int
+  registrationNumber String // normalized uppercase
+  vehicleType        String // "Car", "SUV", "Hatchback", "Sedan", "Motorcycle", "Electric", etc.
+  fuelType           String // "Petrol", "Diesel", "CNG", "Electric", "Hybrid"
+  photo              String?
+  notes              String?
+  currentOdometer    Int      @default(0)
+  isActive           Boolean  @default(true)
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  odometerReadings   OdometerReading[]
+  serviceRecords     ServiceRecord[]
+  serviceReminders   ServiceReminder[]
+  documents          Document[]
+  insurancePolicies  InsurancePolicy[]
+  warranties         Warranty[]
+  tyreBatteryRecords TyreBatteryRecord[]
+  fuelLogs           FuelLog[]
+  expenses           Expense[]
+  careSchedules      CareSchedule[]
+  notifications      Notification[]
+
+  @@unique([userId, registrationNumber])
+  @@index([userId])
+}
+
+model OdometerReading {
+  id           String   @id @default(uuid())
+  vehicleId    String
+  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  reading      Int
+  readingDate  DateTime
+  isCorrection Boolean  @default(false)
+  notes        String?
+  source       String   @default("MANUAL") // "MANUAL", "SERVICE", "FUEL"
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([vehicleId, readingDate])
+}
+
+model ServiceRecord {
+  id            String   @id @default(uuid())
+  vehicleId     String
+  vehicle       Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  serviceDate   DateTime
+  serviceType   String // "General Service", "Oil Change", "Brake Service", "Major Service", "Inspection", "Repair"
+  workshopName  String
+  description   String
+  partsReplaced String?
+  cost          Float
+  odometer      Int
+  invoiceUrl    String?
+  nextDueMonths Int?
+  nextDueKm     Int?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([vehicleId, serviceDate])
+}
+
+model ServiceReminder {
+  id          String    @id @default(uuid())
+  vehicleId   String
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  title       String
+  serviceType String
+  dueDate     DateTime?
+  dueOdometer Int?
+  isCompleted Boolean   @default(false)
+  completedAt DateTime?
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([vehicleId, isCompleted])
+}
+
+model Document {
+  id             String   @id @default(uuid())
+  vehicleId      String
+  vehicle        Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  documentType   String // "RC", "PUC", "PERMIT", "FITNESS", "TAX", "OTHER"
+  documentNumber String
+  issueDate      DateTime
+  expiryDate     DateTime
+  fileUrl        String?
+  notes          String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([vehicleId, expiryDate])
+}
+
+model InsurancePolicy {
+  id           String   @id @default(uuid())
+  vehicleId    String
+  vehicle      Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  insurer      String
+  policyNumber String
+  coverType    String // "Comprehensive", "Third-Party", "Zero Depreciation"
+  premium      Float
+  idv          Float? // Insured Declared Value
+  startDate    DateTime
+  expiryDate   DateTime
+  documentUrl  String?
+  isActive     Boolean  @default(true)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([vehicleId, expiryDate])
+}
+
+model Warranty {
+  id            String   @id @default(uuid())
+  vehicleId     String
+  vehicle       Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  warrantyType  String // "Vehicle", "Battery", "Tyre", "Component"
+  provider      String
+  coverageNotes String
+  startDate     DateTime
+  expiryDate    DateTime
+  maxOdometer   Int?
+  documentUrl   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([vehicleId, expiryDate])
+}
+
+model TyreBatteryRecord {
+  id                      String    @id @default(uuid())
+  vehicleId               String
+  vehicle                 Vehicle   @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  itemType                String // "TYRE", "BATTERY"
+  brand                   String
+  model                   String
+  position                String? // "Front Left", "Front Right", "Rear Left", "Rear Right", "Spare", "Engine Compartment"
+  sizeOrSerial            String?
+  installedDate           DateTime
+  installedOdometer       Int
+  replacementDueAgeMonths Int?
+  replacementDueKm        Int?
+  lastRotatedDate         DateTime?
+  lastAlignedDate         DateTime?
+  notes                   String?
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+
+  @@index([vehicleId, itemType])
+}
+
+model FuelLog {
+  id                   String   @id @default(uuid())
+  vehicleId            String
+  vehicle              Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  logDate              DateTime
+  fuelType             String // "Petrol", "Diesel", "CNG", "Electricity"
+  quantity             Float // Litres or kWh
+  totalCost            Float
+  pricePerUnit         Float
+  odometer             Int
+  isFullTank           Boolean  @default(true)
+  calculatedEfficiency Float? // km/L or km/kWh
+  notes                String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@index([vehicleId, logDate])
+}
+
+model Expense {
+  id          String   @id @default(uuid())
+  vehicleId   String
+  vehicle     Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  expenseDate DateTime
+  category    String // "Fuel", "Service", "Insurance", "Accessories", "Repairs", "Fines", "Tolls", "Washing", "Other"
+  amount      Float
+  description String
+  sourceType  String   @default("MANUAL") // "MANUAL", "FUEL", "SERVICE", "INSURANCE"
+  sourceId    String? // Id of FuelLog, ServiceRecord, InsurancePolicy
+  receiptUrl  String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([vehicleId, expenseDate])
+  @@index([sourceType, sourceId])
+}
+
+model CareSchedule {
+  id            String    @id @default(uuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicleId     String?
+  vehicle       Vehicle?  @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  title         String
+  careType      String // "WASH", "INTERIOR_CLEAN", "WAXING", "FLUID_CHECK", "INSPECTION", "OTHER"
+  scheduledDate DateTime
+  recurrence    String    @default("NONE") // "NONE", "WEEKLY", "BIWEEKLY", "MONTHLY", "QUARTERLY"
+  isCompleted   Boolean   @default(false)
+  completedAt   DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId, scheduledDate])
+}
+
+model EmergencyContact {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name              String
+  contactType       String // "PERSONAL", "ROADSIDE_ASSISTANCE", "INSURANCE_HELPLINE", "GARAGE", "TOWING"
+  phone             String
+  altPhone          String?
+  policyOrAccountNo String?
+  notes             String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model FavouritePlace {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  category  String // "GARAGE", "TYRE_SHOP", "SERVICE_CENTRE", "FUEL_STATION", "EV_CHARGER", "CAR_WASH"
+  address   String
+  latitude  Float
+  longitude Float
+  phone     String?
+  rating    Float?
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId, category])
+}
+
+model Notification {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicleId String?
+  vehicle   Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: SetNull)
+  title     String
+  message   String
+  category  String // "INSURANCE", "DOCUMENT", "SERVICE", "WARRANTY", "TYRE_BATTERY", "CARE", "SYSTEM"
+  priority  String   @default("INFO") // "INFO", "WARNING", "URGENT"
+  isRead    Boolean  @default(false)
+  dedupeKey String
+  linkUrl   String?
+  createdAt DateTime @default(now())
+
+  @@unique([userId, dedupeKey])
+  @@index([userId, isRead])
+}
+
+model UserSettings {
+  id                 String   @id @default(uuid())
+  userId             String   @unique
+  user               User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emailAlerts        Boolean  @default(true)
+  smsAlerts          Boolean  @default(false)
+  distanceUnit       String   @default("km") // "km" or "miles"
+  currency           String   @default("₹") // "₹", "$", "€", "£", "AED"
+  reminderDaysBefore String   @default("30,15,7")
+  updatedAt          DateTime @updatedAt
+}
