@@ -29,8 +29,8 @@ export class AuthService {
         email: data.email.toLowerCase().trim(),
         mobile: data.mobile.trim(),
         passwordHash,
-        isEmailVerified: false,
-        isMobileVerified: false,
+        isEmailVerified: true,
+        isMobileVerified: true,
         settings: {
           create: {
             emailAlerts: true,
@@ -44,21 +44,37 @@ export class AuthService {
       include: { settings: true },
     });
 
-    // Generate initial registration verification OTP
-    const emailOtp = await this.createOtp(user.email, 'REGISTER_EMAIL');
-    const smsOtp = await this.createOtp(user.mobile, 'REGISTER_SMS');
+    const token = jwt.sign(
+      { id: user.id, email: user.email, name: user.name },
+      env.JWT_SECRET,
+      { expiresIn: env.JWT_EXPIRES_IN as any }
+    );
+
+    let devOtps: { emailOtp?: string; smsOtp?: string } | undefined;
+    if (env.NODE_ENV === 'development') {
+      try {
+        const emailOtp = await this.createOtp(user.email, 'REGISTER_EMAIL');
+        const smsOtp = await this.createOtp(user.mobile, 'REGISTER_SMS');
+        devOtps = { emailOtp, smsOtp };
+      } catch {
+        // development OTP generation is non-blocking
+      }
+    }
 
     return {
+      token,
       user: {
         id: user.id,
         name: user.name,
         email: user.email,
         mobile: user.mobile,
+        avatar: user.avatar,
         role: user.role,
         isEmailVerified: user.isEmailVerified,
         isMobileVerified: user.isMobileVerified,
+        settings: user.settings,
       },
-      devOtps: env.NODE_ENV === 'development' ? { emailOtp, smsOtp } : undefined,
+      devOtps,
     };
   }
 

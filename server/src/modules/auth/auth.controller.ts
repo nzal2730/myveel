@@ -15,7 +15,7 @@ export class AuthController {
       const result = await AuthService.register({ name, email, mobile, password });
       return res.status(201).json({
         success: true,
-        message: 'Registration successful. Please verify your email and phone number.',
+        message: 'Registration successful.',
         data: result,
       });
     } catch (err: any) {

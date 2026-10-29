@@ -44,20 +44,14 @@ export default function RegisterPage() {
 
     setLoading(true);
     try {
-      const result = await register({
+      await register({
         name: form.name.trim(),
         email: form.email.trim(),
         mobile: form.mobile.trim(),
         password: form.password,
       });
-      toast.success('Account created. Verify your email and mobile to continue.');
-      navigate('/verify-otp', {
-        state: {
-          email: result.user.email,
-          mobile: result.user.mobile,
-          devOtps: result.devOtps,
-        },
-      });
+      toast.success('Account created successfully! Welcome to MyVeel.');
+      navigate('/');
     } catch (err: any) {
       setError(err.message || 'Registration failed. Please try again.');
     } finally {
@@ -142,10 +136,6 @@ export default function RegisterPage() {
         <Button type="submit" loading={loading} className="w-full" icon={<UserPlus className="h-4 w-4" />}>
           Create my account
         </Button>
-        <p className="text-center text-[11px] leading-relaxed text-text-secondary/80">
-          Registration generates one-time codes for email and mobile verification. In development,
-          the codes are shown on the next screen.
-        </p>
       </form>
     </AuthShell>
   );

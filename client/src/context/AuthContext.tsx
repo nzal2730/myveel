@@ -18,6 +18,7 @@ interface RegisterPayload {
 }
 
 interface RegisterResult {
+  token?: string;
   user: User;
   devOtps?: { emailOtp?: string; smsOtp?: string };
 }
@@ -93,7 +94,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const register = useCallback(
-    (payload: RegisterPayload) => api.post<RegisterResult>('/auth/register', payload),
+    async (payload: RegisterPayload) => {
+      const result = await api.post<RegisterResult>('/auth/register', payload);
+      if (result.token) {
+        localStorage.setItem(TOKEN_KEY, result.token);
+        setToken(result.token);
+        setUser(result.user);
+      }
+      return result;
+    },
     []
   );
 
