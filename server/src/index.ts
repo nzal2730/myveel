@@ -100,10 +100,10 @@ app.use(errorHandler);
 // Start server (only if not in test mode)
 if (process.env.NODE_ENV !== 'test') {
   const startServer = () => {
-    app.listen(env.PORT, () => {
+    app.listen(env.PORT, '0.0.0.0', () => {
       console.log(`=======================================================`);
       console.log(` 🚀 MYVEEL BACKEND SERVICE ACTIVE`);
-      console.log(` 📡 Listening on: http://localhost:${env.PORT}`);
+      console.log(` 📡 Listening on: http://0.0.0.0:${env.PORT}`);
       console.log(` ⚙️  Environment: ${env.NODE_ENV}`);
       console.log(`=======================================================`);
       // Start background job scheduler

@@ -2,7 +2,10 @@
   "compilerOptions": {
     "target": "es2020",
     "module": "commonjs",
+    "moduleResolution": "node",
     "lib": ["es2020"],
+    "types": ["node"],
+    "typeRoots": ["./node_modules/@types", "../node_modules/@types"],
     "outDir": "./dist",
     "rootDir": "./src",
     "strict": false,
@@ -14,4 +17,3 @@
   },
   "include": ["src/**/*"]
 }
-

@@ -3,7 +3,7 @@ services:
     name: myveel
     runtime: node
     plan: free
-    buildCommand: npm ci --include=dev && npm run deploy:build
+    buildCommand: npm install && npm run deploy:build
     startCommand: npm run deploy:start
     healthCheckPath: /api/health
     autoDeploy: true
