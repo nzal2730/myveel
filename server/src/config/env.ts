@@ -12,5 +12,6 @@ export const env = {
   NODE_ENV: process.env.NODE_ENV || 'development',
   UPLOAD_DIR: process.env.UPLOAD_DIR || './uploads',
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000',
+  SEED_DEMO: process.env.SEED_DEMO === 'true',
 };
 

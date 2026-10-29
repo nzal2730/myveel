@@ -5,6 +5,7 @@ import fs from 'fs';
 import { env } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 import { startReminderScheduler, runManualSchedulerSync } from './jobs/reminderScheduler';
+import { ensureDemoData } from './bootstrap/demoSeed';
 
 // Import route modules
 import authRoutes from './modules/auth/auth.routes';
@@ -98,15 +99,25 @@ app.use(errorHandler);
 
 // Start server (only if not in test mode)
 if (process.env.NODE_ENV !== 'test') {
-  app.listen(env.PORT, () => {
-    console.log(`=======================================================`);
-    console.log(` 🚀 MYVEEL BACKEND SERVICE ACTIVE`);
-    console.log(` 📡 Listening on: http://localhost:${env.PORT}`);
-    console.log(` ⚙️  Environment: ${env.NODE_ENV}`);
-    console.log(`=======================================================`);
-    // Start background job scheduler
-    startReminderScheduler();
-  });
+  const startServer = () => {
+    app.listen(env.PORT, () => {
+      console.log(`=======================================================`);
+      console.log(` 🚀 MYVEEL BACKEND SERVICE ACTIVE`);
+      console.log(` 📡 Listening on: http://localhost:${env.PORT}`);
+      console.log(` ⚙️  Environment: ${env.NODE_ENV}`);
+      console.log(`=======================================================`);
+      // Start background job scheduler
+      startReminderScheduler();
+    });
+  };
+
+  if (env.SEED_DEMO) {
+    ensureDemoData()
+      .catch((err) => console.error('[MYVEEL-BOOTSTRAP] Demo seed failed:', err))
+      .finally(startServer);
+  } else {
+    startServer();
+  }
 }
 
 export default app;
