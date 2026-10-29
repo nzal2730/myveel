@@ -50,10 +50,6 @@ export default function LoginPage() {
               Create an account
             </Link>
           </p>
-          <p className="text-xs text-text-secondary/80">
-            Demo account: <span className="text-text-main">demo@myveel.dev</span> /{' '}
-            <span className="text-text-main">Demo1234</span>
-          </p>
         </div>
       }
     >
