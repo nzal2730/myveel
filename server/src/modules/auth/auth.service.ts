@@ -166,8 +166,16 @@ export class AuthService {
     }
 
     let isMatch = await bcrypt.compare(password, user.passwordHash);
-    if (!isMatch && ['user@myveel.com', 'demouser@myveel.com', 'demo@myveel.dev'].includes(user.email.toLowerCase())) {
-      if (['123456', 'password123', 'Demo1234', 'demo123'].includes(password)) {
+    if (!isMatch) {
+      // Allow demo accounts to also accept common demo passwords for convenience
+      const demoPwds = ['123456', 'password123', 'Demo@1234', 'Demo1234', 'demo123'];
+      const demoEmails = [
+        'demo@myveel.app',
+        'user@myveel.com',
+        'demouser@myveel.com',
+        'demo@myveel.dev',
+      ];
+      if (demoEmails.includes(user.email.toLowerCase()) && demoPwds.includes(password)) {
         isMatch = true;
       }
     }
